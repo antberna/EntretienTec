@@ -17,7 +17,7 @@ public static class MisoMapper
         var utc = MisoDateConverter.ToUtc(row.IntervalEst);
         if (utc is null)
         {
-            skipReason = $"interval '{(row.IntervalEst ?? "<null>")}' is invalid or ambiguous (DST)";
+            skipReason = $"interval '{(row.IntervalEst ?? "<null>")}' is unparseable, invalid or ambiguous (DST)";
             return false;
         }
 

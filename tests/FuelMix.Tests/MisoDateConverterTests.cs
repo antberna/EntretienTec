@@ -5,32 +5,34 @@ namespace FuelMix.Tests;
 public class MisoDateConverterTests
 {
     [Fact]
-    public void Summer_date_converts_to_edt_offset()
+    public void Summer_midnight_converts_to_04_utc()
     {
         var result = MisoDateConverter.ToUtc("2026-07-01 12:00:00 AM");
 
         Assert.NotNull(result);
-        Assert.Equal(TimeSpan.FromHours(-4), result.Value.Offset); // EDT
+        Assert.Equal(TimeSpan.Zero, result.Value.Offset); // normalisé en UTC
         Assert.Equal(new DateTime(2026, 7, 1, 4, 0, 0, DateTimeKind.Utc), result.Value.UtcDateTime);
     }
 
     [Fact]
-    public void Winter_date_converts_to_est_offset()
+    public void Winter_midnight_converts_to_05_utc()
     {
         var result = MisoDateConverter.ToUtc("2026-01-15 12:00:00 AM");
 
         Assert.NotNull(result);
-        Assert.Equal(TimeSpan.FromHours(-5), result.Value.Offset); // EST
+        Assert.Equal(TimeSpan.Zero, result.Value.Offset);
         Assert.Equal(new DateTime(2026, 1, 15, 5, 0, 0, DateTimeKind.Utc), result.Value.UtcDateTime);
     }
 
     [Fact]
-    public void Offsets_differ_between_summer_and_winter_no_fixed_offset()
+    public void Same_wall_clock_time_maps_to_different_utc_between_seasons_no_fixed_offset()
     {
         var summer = MisoDateConverter.ToUtc("2026-07-01 12:00:00 AM")!.Value;
         var winter = MisoDateConverter.ToUtc("2026-01-15 12:00:00 AM")!.Value;
 
-        Assert.NotEqual(summer.Offset, winter.Offset);
+        // Même heure murale (00:00) : EDT => 04:00 UTC, EST => 05:00 UTC (pas de décalage fixe).
+        Assert.Equal(4, summer.UtcDateTime.Hour);
+        Assert.Equal(5, winter.UtcDateTime.Hour);
     }
 
     [Fact]
@@ -45,6 +47,16 @@ public class MisoDateConverterTests
     {
         // 2026-03-08 02:30 AM n'existe pas (passage 02:00 -> 03:00 EDT).
         Assert.Null(MisoDateConverter.ToUtc("2026-03-08 02:30:00 AM"));
+    }
+
+    [Fact]
+    public void Single_digit_hour_is_parsed()
+    {
+        // MISO émet les heures 1-9 sans zéro initial.
+        var result = MisoDateConverter.ToUtc("2026-07-01 9:55:00 AM");
+
+        Assert.NotNull(result);
+        Assert.Equal(new DateTime(2026, 7, 1, 13, 55, 0, DateTimeKind.Utc), result.Value.UtcDateTime);
     }
 
     [Theory]

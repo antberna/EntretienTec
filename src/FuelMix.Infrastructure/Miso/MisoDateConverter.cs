@@ -13,7 +13,8 @@ namespace FuelMix.Infrastructure.Miso;
 public static class MisoDateConverter
 {
     private const string TimeZoneId = "America/New_York";
-    private const string Format = "yyyy-MM-dd hh:mm:ss tt";
+    // `h` (et non `hh`) : MISO émet les heures 1-9 sans zéro initial (ex: "9:55:00 AM").
+    private const string Format = "yyyy-MM-dd h:mm:ss tt";
 
     private static readonly TimeZoneInfo Eastern =
         TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
@@ -36,6 +37,6 @@ public static class MisoDateConverter
             return null;
         }
 
-        return new DateTimeOffset(naive, Eastern.GetUtcOffset(naive));
+        return new DateTimeOffset(naive, Eastern.GetUtcOffset(naive)).ToUniversalTime();
     }
 }

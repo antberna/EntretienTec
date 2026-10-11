@@ -28,7 +28,8 @@ var ingestConnection = builder.Configuration["ConnectionStrings:Ingest"]
     ?? throw new InvalidOperationException("ConnectionStrings:Ingest is required.");
 var migratorConnection = builder.Configuration["ConnectionStrings:Migrator"] ?? ingestConnection;
 
-builder.Services.AddDbContext<FuelMixDbContext>(options => options.UseNpgsql(ingestConnection));
+builder.Services.AddDbContext<FuelMixDbContext>(options =>
+    options.UseNpgsql(ingestConnection, NpgsqlDefaults.Configure));
 
 builder.Services.AddSingleton(new FuelMixUpserter(ingestConnection));
 

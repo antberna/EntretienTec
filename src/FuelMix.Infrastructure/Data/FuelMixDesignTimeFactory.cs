@@ -16,7 +16,7 @@ public class FuelMixDesignTimeFactory : IDesignTimeDbContextFactory<FuelMixDbCon
             ?? "Host=localhost;Port=5432;Database=fuelmix;Username=fuelmix_migrator;Password=migrator";
 
         var options = new DbContextOptionsBuilder<FuelMixDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, NpgsqlDefaults.Configure)
             .Options;
 
         return new FuelMixDbContext(options);

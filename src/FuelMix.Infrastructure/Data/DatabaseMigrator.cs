@@ -11,7 +11,7 @@ public static class DatabaseMigrator
     public static void Migrate(string connectionString)
     {
         var options = new DbContextOptionsBuilder<FuelMixDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, NpgsqlDefaults.Configure)
             .Options;
 
         using var context = new FuelMixDbContext(options);
