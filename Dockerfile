@@ -14,9 +14,16 @@ RUN dotnet publish "$PROJECT" -c Release -o /app/publish
 # ---------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+
+# Dépendances natives : libgssapi (Npgsql) + tzdata (fuseau America/New_York)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 
 ARG ENTRYPOINT_DLL
 ENV ENTRYPOINT_DLL=${ENTRYPOINT_DLL}
 
-ENTRYPOINT ["sh", "-c", "exec dotnet \"${ENTRYPOINT_DLL}\""]
+# `$@` transmet les arguments (ex. --once live) au binaire.
+ENTRYPOINT ["sh", "-c", "exec dotnet \"${ENTRYPOINT_DLL}\" \"$@\"", "--"]
