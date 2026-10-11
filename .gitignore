@@ -1,0 +1,35 @@
+# --- .NET ---
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userprefs
+*.cache
+project.lock.json
+artifacts/
+TestResults/
+*.coverage
+*.coveragexml
+*.trx
+
+# --- Environnements / secrets ---
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+secrets.*.json
+*.pem
+*.key
+
+# --- IDE / OS ---
+.vs/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# --- Docker / volumes ---
+docker/volumes/
+*.log
