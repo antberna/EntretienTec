@@ -29,6 +29,21 @@ var app = builder.Build();
 // Journalise les requêtes sans corps (aucun secret dans les logs).
 app.UseSerilogRequestLogging();
 
+// Health check non authentifié : vérifie la connectivité à la base (rôle report).
+app.MapGet("/health", async (FuelMixDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        return await db.Database.CanConnectAsync(ct)
+            ? Results.Ok(new { status = "Healthy" })
+            : Results.Json(new { status = "Unhealthy" }, statusCode: 503);
+    }
+    catch
+    {
+        return Results.Json(new { status = "Unhealthy" }, statusCode: 503);
+    }
+});
+
 var fuelMix = app.MapGroup("/api/fuelmix")
     .AddEndpointFilter<ApiKeyEndpointFilter>();
 

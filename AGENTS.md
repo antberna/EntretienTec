@@ -22,11 +22,18 @@ et l'expose en lecture seule via une API REST.
 
 ## Commandes de validation
 ```bash
+dotnet tool restore               # restaure dotnet-ef (outil local)
 dotnet build FuelMix.slnx
+docker compose up -d postgres     # requis : les tests d'intégration utilisent PostgreSQL
 dotnet test FuelMix.slnx
-docker compose up -d postgres      # puis attendre le healthcheck
 docker compose ps
-docker compose exec postgres psql -U fuelmix_report -d fuelmix -c 'SELECT 1'
+```
+
+Exécuter l'ingestion (mode ponctuel) :
+```bash
+ConnectionStrings__Migrator="Host=localhost;Port=5432;Database=fuelmix;Username=fuelmix_migrator;Password=migrator" \
+ConnectionStrings__Ingest="Host=localhost;Port=5432;Database=fuelmix;Username=fuelmix_ingest;Password=ingest" \
+dotnet run --project src/FuelMix.Worker -- --once live
 ```
 
 ## Étapes
