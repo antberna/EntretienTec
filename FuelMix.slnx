@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FuelMix.Api/FuelMix.Api.csproj" />
+    <Project Path="src/FuelMix.Infrastructure/FuelMix.Infrastructure.csproj" />
+    <Project Path="src/FuelMix.Worker/FuelMix.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FuelMix.Tests/FuelMix.Tests.csproj" />
+  </Folder>
+</Solution>

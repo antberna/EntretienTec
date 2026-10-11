@@ -22,10 +22,11 @@ et l'expose en lecture seule via une API REST.
 
 ## Commandes de validation
 ```bash
-dotnet build FuelMix.sln
-dotnet test FuelMix.sln
+dotnet build FuelMix.slnx
+dotnet test FuelMix.slnx
 docker compose up -d postgres      # puis attendre le healthcheck
 docker compose ps
+docker compose exec postgres psql -U fuelmix_report -d fuelmix -c 'SELECT 1'
 ```
 
 ## Étapes
