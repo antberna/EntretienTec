@@ -8,6 +8,8 @@ namespace FuelMix.Infrastructure.Ingestion;
 /// <summary>
 /// Orchestration d'un import : fetch MISO -> mapping -> upsert transactionnel -> trace import_run.
 /// Logique réutilisable par le Worker (périodique) et la commande manuelle (--once).
+/// En cas d'échec, la trace import_run (status=failed) est enregistrée puis l'exception
+/// est propagée à l'orchestrateur. Une annulation n'est pas tracée comme un échec.
 /// </summary>
 public class FuelMixIngestor
 {
@@ -68,18 +70,21 @@ public class FuelMixIngestor
             run.RowsUnchanged = entries.Count - upsert.Inserted - upsert.Updated;
             run.Status = "success";
         }
+        catch (OperationCanceledException)
+        {
+            // Annulation (ex. arrêt du service) : pas un échec métier, on ne trace rien.
+            throw;
+        }
         catch (Exception ex)
         {
             run.Status = "failed";
             run.Error = ex.Message;
             _logger.LogError(ex, "Ingestion failed (source {Source})", run.Source);
+            await RecordRunAsync(run);
+            throw; // propagée à l'orchestrateur
         }
-        finally
-        {
-            run.FinishedAt = DateTimeOffset.UtcNow;
-            _db.ImportRuns.Add(run);
-            await _db.SaveChangesAsync(cancellationToken);
-        }
+
+        await RecordRunAsync(run);
 
         _logger.LogInformation(
             "Ingestion {Status} (source {Source}): received={Received} inserted={Inserted} updated={Updated} unchanged={Unchanged} skipped={Skipped}",
@@ -89,5 +94,20 @@ public class FuelMixIngestor
         return new IngestResult(
             run.Status, run.Source, run.RowsReceived, run.RowsInserted,
             run.RowsUpdated, run.RowsUnchanged, run.RowsSkipped, run.Error);
+    }
+
+    /// <summary>Trace l'exécution (best-effort) sans masquer une exception en cours.</summary>
+    private async Task RecordRunAsync(ImportRun run)
+    {
+        try
+        {
+            run.FinishedAt = DateTimeOffset.UtcNow;
+            _db.ImportRuns.Add(run);
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to record import_run");
+        }
     }
 }

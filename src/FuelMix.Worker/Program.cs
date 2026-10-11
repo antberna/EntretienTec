@@ -33,6 +33,9 @@ builder.Services.AddDbContext<FuelMixDbContext>(options =>
 
 builder.Services.AddSingleton(new FuelMixUpserter(ingestConnection));
 
+var misoOptions = builder.Configuration.GetSection("Miso").Get<MisoClientOptions>() ?? new MisoClientOptions();
+
+builder.Services.AddSingleton(misoOptions);
 builder.Services.AddSingleton(_ => new HttpClient
 {
     BaseAddress = new Uri(builder.Configuration["Miso:BaseUrl"] ?? "https://public-api.misoenergy.org/"),
@@ -52,8 +55,20 @@ if (once)
 {
     using var scope = host.Services.CreateScope();
     var ingestor = scope.ServiceProvider.GetRequiredService<FuelMixIngestor>();
-    var result = await ingestor.IngestAsync(source);
-    return result.Status == "success" ? 0 : 1;
+    try
+    {
+        var result = await ingestor.IngestAsync(source);
+        return result.Status == "success" ? 0 : 1;
+    }
+    catch (OperationCanceledException)
+    {
+        return 130; // interrompu (SIGINT)
+    }
+    catch (Exception)
+    {
+        // L'échec est déjà tracé dans import_run par l'ingestor.
+        return 1;
+    }
 }
 
 await host.RunAsync();
