@@ -108,6 +108,8 @@ dotnet test FuelMix.slnx
 - **Tests d'intégration** : idempotence de l'upsert, annulation transactionnelle, isolation des rôles
   (contre un vrai PostgreSQL, base `fuelmix_test` recréée à chaque exécution).
 
+Des scénarios de test détaillés et reproductibles sont décrits dans [TESTING.md](TESTING.md).
+
 ## Modèle de données (idempotence)
 
 ```sql
