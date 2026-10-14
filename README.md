@@ -41,7 +41,7 @@ docker compose up --build
 
 Cela :
 - crée la base `fuelmix` et trois rôles applicatifs (moindre privilège) — voir tableau ci-dessous ;
-- démarre le **Worker**, qui applique les migrations puis ingère le snapshot live (puis toutes les 300 s) ;
+- démarre le **Worker**, qui applique les migrations puis ingère le snapshot live (puis toutes les 5 minutes) ;
 - démarre l'**API** sur le port `8080`.
 
 ### Tester l'API
@@ -57,6 +57,19 @@ curl -H "X-Api-Key: dev-api-key" "http://localhost:8080/api/fuelmix?category=Coa
 | GET | `/health` | Liveness (non authentifié) |
 | GET | `/api/fuelmix/latest` | Dernier instantané (8 catégories) |
 | GET | `/api/fuelmix?from=&to=&category=&page=&pageSize=` | Série temporelle paginée |
+
+### Ingestion manuelle (à la demande)
+
+En plus de l'ingestion périodique automatique, vous pouvez déclencher un import ponctuel :
+
+```bash
+# Importer le snapshot live une fois
+docker compose run --rm worker --once live
+
+# Backfill d'une journée complète (démonstration)
+docker compose run --rm worker --once today
+docker compose run --rm worker --once yesterday
+```
 
 ### Rôles PostgreSQL (créés automatiquement)
 
@@ -104,7 +117,7 @@ import_run (id bigint, started_at, finished_at, status, source,
             rows_received, rows_inserted, rows_updated, rows_unchanged, rows_skipped, error)
 ```
 
-- **Clé métier** = `(interval_utc, category)` : garante de l'idempotence via la contrainte unique.
+- **Clé métier** = `(interval_utc, category)` : garantit l'idempotence via la contrainte unique.
 - **Upsert** : `INSERT … ON CONFLICT (interval_utc, category) DO UPDATE … WHERE megawatts IS DISTINCT FROM …`
   → aucune écriture si la valeur est inchangée. `RETURNING (xmax = 0)` distingue insertion, mise à jour
   et absence d'écriture, ce qui permet des compteurs exacts.
@@ -119,7 +132,7 @@ import_run (id bigint, started_at, finished_at, status, source,
 est **DST-aware** (jamais de décalage fixe) :
 
 - heure **inexistante** (gap du passage à l'heure d'été) → mesure ignorée + loguée ;
-- heure **ambiguë** (chevauchenent du retour à l'heure standard) → mesure ignorée + loguée.
+- heure **ambiguë** (chevauchement du retour à l'heure standard) → mesure ignorée + loguée.
 
 La source ne fournissant pas d'offset, on refuse de deviner : une mesure ambiguë est **signalée et
 ignorée** plutôt que fusionnée à tort. Le stockage est en `timestamptz` (UTC), exposé en ISO 8601 UTC

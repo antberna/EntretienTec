@@ -6,7 +6,7 @@ Chaque scénario indique son objectif, les commandes à exécuter et le résulta
 ## Prérequis
 
 ```bash
-cd /Users/antoine/DEV/EntretienTec
+cd ~/EntretienTec
 docker compose up -d postgres        # PostgreSQL (base fuelmix + rôles)
 ```
 
