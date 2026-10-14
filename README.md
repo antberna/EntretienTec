@@ -25,58 +25,32 @@ MISO API ──(HTTP, retry/backoff)──▶ Worker .NET (ingestion périodique
 
 ## Prérequis
 
-- .NET 10 SDK
-- Docker + Docker Compose (pour PostgreSQL)
+- **Docker** (et Docker Compose) — suffit pour tout démarrer en conteneurs.
+- .NET 10 SDK — uniquement pour le développement local et les tests.
 
-## Démarrage
+## Démarrage rapide (tout en conteneurs)
 
-### 1. Démarrer PostgreSQL
-
-```bash
-cp .env.example .env        # adaptez les valeurs (le .env n'est PAS committé)
-docker compose up -d postgres
-```
-
-Le script `docker/init/01-init.sh` (exécuté une fois) crée la base `fuelmix`, le schéma
-`fuelmix` et trois rôles applicatifs (moindre privilège) :
-
-| Rôle | Privilèges |
-|---|---|
-| `fuelmix_migrator` | propriétaire du schéma, exécute les migrations (DDL) |
-| `fuelmix_ingest` | SELECT/INSERT/UPDATE sur les tables (aucun DDL) |
-| `fuelmix_report` | SELECT uniquement (lecture seule) |
-
-### 2. Restaurer l'outil de migration (une fois)
+Une seule commande démarre **PostgreSQL + le Worker (ingestion) + l'API** :
 
 ```bash
-dotnet tool restore
+git clone <url-du-repo>
+cd <nom-du-repo>
+cp .env.example .env        # optionnel : des valeurs de démo par défaut sont déjà prévues
+docker compose up --build
 ```
 
-### 3. Lancer l'ingestion
+Cela :
+- crée la base `fuelmix` et trois rôles applicatifs (moindre privilège) — voir tableau ci-dessous ;
+- démarre le **Worker**, qui applique les migrations puis ingère le snapshot live (puis toutes les 300 s) ;
+- démarre l'**API** sur le port `8080`.
+
+### Tester l'API
 
 ```bash
-# Import ponctuel du snapshot live (applique aussi les migrations)
-ConnectionStrings__Migrator="Host=localhost;Port=5432;Database=fuelmix;Username=fuelmix_migrator;Password=migrator" \
-ConnectionStrings__Ingest="Host=localhost;Port=5432;Database=fuelmix;Username=fuelmix_ingest;Password=ingest" \
-dotnet run --project src/FuelMix.Worker -- --once live
-
-# Backfill manuel (démonstration)
-# ... --once today
-# ... --once yesterday
-
-# Mode périodique (toutes les 300 s par défaut)
-# ... (sans --once)
+curl http://localhost:8080/health
+curl -H "X-Api-Key: dev-api-key" http://localhost:8080/api/fuelmix/latest
+curl -H "X-Api-Key: dev-api-key" "http://localhost:8080/api/fuelmix?category=Coal&pageSize=5"
 ```
-
-### 4. Lancer l'API
-
-```bash
-ConnectionStrings__Report="Host=localhost;Port=5432;Database=fuelmix;Username=fuelmix_report;Password=report" \
-Auth__ApiKey="votre-clé" \
-dotnet run --project src/FuelMix.Api
-```
-
-Endpoints :
 
 | Méthode | Chemin | Description |
 |---|---|---|
@@ -84,17 +58,25 @@ Endpoints :
 | GET | `/api/fuelmix/latest` | Dernier instantané (8 catégories) |
 | GET | `/api/fuelmix?from=&to=&category=&page=&pageSize=` | Série temporelle paginée |
 
-Exemple :
+### Rôles PostgreSQL (créés automatiquement)
+
+| Rôle | Privilèges |
+|---|---|
+| `fuelmix_migrator` | propriétaire du schéma, exécute les migrations (DDL) |
+| `fuelmix_ingest` | SELECT/INSERT/UPDATE sur les tables (aucun DDL) |
+| `fuelmix_report` | SELECT uniquement (lecture seule) |
+
+### Arrêter
 
 ```bash
-curl -H "X-Api-Key: votre-clé" "http://localhost:8080/api/fuelmix?category=Coal&pageSize=5"
+docker compose down        # garde les données
+# docker compose down -v   # efface aussi la base
 ```
 
-### 5. Tout en conteneurs (optionnel)
+## Développement local (sans Docker, optionnel)
 
-```bash
-docker compose up --build   # postgres + worker + api
-```
+Pour exécuter les composants individuellement (Worker en `--once`, API avec variables
+d'environnement) ou lancer les tests, voir [TESTING.md](TESTING.md) (scénarios 1 à 11).
 
 ## Tests
 
